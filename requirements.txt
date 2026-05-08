@@ -1,0 +1,15 @@
+--index-url https://download.pytorch.org/whl/cu128
+--extra-index-url https://pypi.org/simple
+
+torch==2.11.0
+torchvision==0.26.0
+transformers==5.6.1
+accelerate==1.13.0
+huggingface-hub==1.11.0
+safetensors==0.7.0
+sentencepiece==0.2.1
+numpy==2.4.4
+pandas==3.0.2
+matplotlib==3.10.8
+tqdm==4.67.3
+PyYAML==6.0.3

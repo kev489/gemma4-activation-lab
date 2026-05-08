@@ -1,0 +1,55 @@
+# Local Python environment
+.venv/
+venv/
+
+# Python caches and test/tool output
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Notebook/editor/system noise
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Local agent/tool state
+.codex
+.agents/
+
+# Secrets and local runtime config
+.env
+.env.*
+*.token
+*.key
+
+# Experiment scratch artifacts
+outputs/*
+!outputs/.gitkeep
+*.log
+*.pt
+*.pth
+
+# Local duplicate/import dump; canonical datasets live in data/
+activation_lab_dataset/
+
+# Local model/checkpoint/cache directories or large model files
+.cache/
+huggingface/
+hf_cache/
+models/
+checkpoints/
+*.safetensors
+
+# Tracking services / eval run stores
+wandb/
+runs/
+mlruns/
+tensorboard/
