@@ -39,6 +39,9 @@ outputs/*
 
 # Local duplicate/import dump; canonical datasets live in data/
 activation_lab_dataset/
+impactBench/impactbench_transcripts/all_models/*.jsonl
+data/impactbench_autonomy/autonomy_preservation_records.jsonl
+data/impactbench_autonomy/self_determination_records.jsonl
 
 # Local model/checkpoint/cache directories or large model files
 .cache/

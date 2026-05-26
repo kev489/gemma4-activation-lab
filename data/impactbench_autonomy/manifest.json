@@ -1,0 +1,82 @@
+{
+  "output_dir": "data/impactbench_autonomy",
+  "record_shape": "Original full ImpactBench transcript records. No first-turn extraction or verdict relabeling.",
+  "source_transcript_dir": "impactBench/impactbench_transcripts/all_models",
+  "subsets": {
+    "Autonomy Preservation": {
+      "benchmark_counts": {
+        "autonomy-preserving-information-provision": 1680,
+        "cog-bias": 1848,
+        "cognitive-offloading-asymmetry-over-scaffolding-vs-autonomy-preservation-in-llm-responses": 168,
+        "financial": 84,
+        "flourishing-ai-benchmark": 168,
+        "humanagency-bench": 1512,
+        "humanebench": 168,
+        "modulated-cognitive-autonomy-benchmark-mcab": 1512,
+        "the-spillunder-effect-of-ai-cognitive-intrusion-and-multitasking-degradation-through-ai-assisted-task-planning": 252,
+        "user-bias": 168
+      },
+      "metric_count": 90,
+      "model_counts": {
+        "claude-haiku-4-5": 540,
+        "claude-opus-4-6": 540,
+        "claude-sonnet-4-6": 540,
+        "deepseek-v3": 540,
+        "gemini-2-5-pro": 540,
+        "gemma-4-31b": 540,
+        "gpt-4o": 540,
+        "gpt-5": 540,
+        "gpt-5-1": 540,
+        "grok-4-1": 540,
+        "grok-4-1-reasoning": 540,
+        "llama-4": 540,
+        "mistral-small-3": 540,
+        "qwen3-80b": 540
+      },
+      "path": "data/impactbench_autonomy/autonomy_preservation_records.jsonl",
+      "rows": 7560,
+      "unique_scenario_ids": 180,
+      "verdict_counts": {
+        "fail": 1,
+        "no": 3071,
+        "yes": 4488
+      }
+    },
+    "Self-Determination": {
+      "benchmark_counts": {
+        "autonomy-preserving-information-provision": 84,
+        "cognitive-offloading-asymmetry-over-scaffolding-vs-autonomy-preservation-in-llm-responses": 168,
+        "flourishing-ai-benchmark": 1008,
+        "humanagency-bench": 1008,
+        "humanebench": 252,
+        "modulated-cognitive-autonomy-benchmark-mcab": 252,
+        "prosocial-ai-index": 252,
+        "the-spillunder-effect-of-ai-cognitive-intrusion-and-multitasking-degradation-through-ai-assisted-task-planning": 672
+      },
+      "metric_count": 44,
+      "model_counts": {
+        "claude-haiku-4-5": 264,
+        "claude-opus-4-6": 264,
+        "claude-sonnet-4-6": 264,
+        "deepseek-v3": 264,
+        "gemini-2-5-pro": 264,
+        "gemma-4-31b": 264,
+        "gpt-4o": 264,
+        "gpt-5": 264,
+        "gpt-5-1": 264,
+        "grok-4-1": 264,
+        "grok-4-1-reasoning": 264,
+        "llama-4": 264,
+        "mistral-small-3": 264,
+        "qwen3-80b": 264
+      },
+      "path": "data/impactbench_autonomy/self_determination_records.jsonl",
+      "rows": 3696,
+      "unique_scenario_ids": 156,
+      "verdict_counts": {
+        "no": 1174,
+        "yes": 2522
+      }
+    }
+  }
+}
