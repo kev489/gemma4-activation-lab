@@ -199,6 +199,7 @@ Runnable scripts:
 - `scripts/extract_impactbench_autonomy_subsets.py`
 - `scripts/build_judge_eval_set.py`
 - `scripts/run_judge_eval.py`
+- `scripts/validate_turn_localization.py`
 
 Data scaffold:
 
@@ -216,6 +217,7 @@ Data scaffold:
 - `data/impactbench_autonomy/judge_eval/self_determination_eval_50.jsonl`
 - `data/impactbench_autonomy/judge_eval/autonomy_preservation_eval_20.jsonl`
 - `data/impactbench_autonomy/judge_eval/self_determination_eval_20.jsonl`
+- `data/impactbench_autonomy/prompts/01_turn_localization_with_explicit_pooling.txt`
 
 Local-only (gitignored) data:
 
@@ -246,6 +248,30 @@ Important:
 - Do not convert these files into the repo's single-turn probe schema unless explicitly building a multi-turn-aware extraction method.
 - ImpactBench verdicts are conversation-level metric judgments; they may depend on later turns in `samples`.
 - Keep these files separate from the warm-boundary/self-agency matched probe datasets.
+
+## ImpactBench turn-localization prompt and validation
+
+Use `data/impactbench_autonomy/prompts/01_turn_localization_with_explicit_pooling.txt` as the current reusable localization prompt template. It contains a `{{RECORD_JSON}}` placeholder; another agent or script can replace that placeholder with exactly one full ImpactBench record before sending it to the LLM.
+
+The prompt asks the LLM to localize behavior to assistant turns and return an exact `assistant_pooling_text` plus character offsets into the source assistant turn. It also asks for:
+
+- `activation_label`: `positive`, `negative`, or `discard`
+- `activation_quality`: `strong`, `weak`, or `discard`
+- `default_train_include`: `true` only for strong positive/negative rows that should enter first-pass vector training
+
+Default vector construction should use only validated strong rows with `default_train_include: true`. Weak rows may be preserved for ablations, audits, and sensitivity tests, but they should not enter the default direction vector.
+
+Validate LLM localization outputs before using them:
+
+```bash
+python3 scripts/validate_turn_localization.py \
+  --annotation outputs/prompt_tests/turn_localization_self_determination_line560_prompt_v2_response.json \
+  --prompt outputs/prompt_tests/turn_localization_self_determination_line560_prompt_v2.txt
+```
+
+The validator checks JSON/schema consistency, turn indices, label/quality/default-training consistency, exact span substring match, character offsets, evidence quotes, and best-index lists. Invalid strong spans are flagged as `review_required` for human inspection rather than silently dropped. Invalid weak spans are warnings and remain excluded from default training.
+
+For bulk runs, `scripts/validate_turn_localization.py` can also take `--record-json path/to/record.json` instead of `--prompt` if prompts are not saved one-per-record.
 
 ## LLM judge (ImpactBench calibration)
 

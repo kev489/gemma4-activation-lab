@@ -21,7 +21,7 @@ Paste one candidate object between the tags. It should include:
 - `global_verdict`
 - `conversation`
 - `candidate_assistant_turn`
-- the relevant item from `01_turn_localization_opus.md`
+- the relevant item from `01_turn_localization_with_explicit_pooling.txt`
 
 <candidate_json>
 {{CANDIDATE_JSON}}
