@@ -37,3 +37,17 @@ Blinded judge-eval sub-samples (recommended production judge is `claude-opus-4-7
 
 - `data/impactbench_autonomy/judge_eval/autonomy_preservation_eval_{20,50}.jsonl`
 - `data/impactbench_autonomy/judge_eval/self_determination_eval_{20,50}.jsonl`
+
+Canonical localized activation examples:
+
+- `data/impactbench_autonomy/activation_examples/v1/examples.jsonl`
+- `data/impactbench_autonomy/activation_examples/v1/excluded_or_review.jsonl`
+- `data/impactbench_autonomy/activation_examples/v1/manifest.json`
+
+These rows preserve multi-turn source references and exact localized pooling
+spans. They are intentionally separate from the single-turn matched
+conversation schema described above. Their `activation_label` values indicate
+criterion satisfaction or violation, not universal beneficial or harmful
+behavior. For first-pass subarea vectors, use `harmful=false`, split by source
+record or scenario, and follow the target-slice policy in
+`activation_examples/v1/README.md`.

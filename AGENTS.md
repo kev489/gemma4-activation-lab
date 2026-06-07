@@ -183,6 +183,7 @@ Core library code:
 - `src/gemma4_activation_lab/intervene.py`
 - `src/gemma4_activation_lab/interventions.py`
 - `src/gemma4_activation_lab/datasets.py`
+- `src/gemma4_activation_lab/activation_datasets.py`
 - `src/gemma4_activation_lab/artifacts.py`
 - `src/gemma4_activation_lab/io_utils.py`
 - `src/gemma4_activation_lab/judge.py`
@@ -200,6 +201,16 @@ Runnable scripts:
 - `scripts/build_judge_eval_set.py`
 - `scripts/run_judge_eval.py`
 - `scripts/validate_turn_localization.py`
+- `scripts/build_turn_localization_prompt_batches.py`
+- `scripts/run_turn_localization_cli_batch.py`
+- `scripts/salvage_turn_localization_exact_spans.py`
+- `scripts/salvage_turn_localization_normalized_spans.py`
+- `scripts/review_turn_localization_fuzzy_span_candidates.py`
+- `scripts/export_turn_localization_dataset.py`
+
+Tests:
+
+- `tests/test_activation_datasets.py`
 
 Data scaffold:
 
@@ -217,6 +228,9 @@ Data scaffold:
 - `data/impactbench_autonomy/judge_eval/self_determination_eval_50.jsonl`
 - `data/impactbench_autonomy/judge_eval/autonomy_preservation_eval_20.jsonl`
 - `data/impactbench_autonomy/judge_eval/self_determination_eval_20.jsonl`
+- `data/impactbench_autonomy/activation_examples/v1/examples.jsonl`
+- `data/impactbench_autonomy/activation_examples/v1/excluded_or_review.jsonl`
+- `data/impactbench_autonomy/activation_examples/v1/manifest.json`
 - `data/impactbench_autonomy/prompts/01_turn_localization_with_explicit_pooling.txt`
 
 Local-only (gitignored) data:
@@ -272,6 +286,59 @@ python3 scripts/validate_turn_localization.py \
 The validator checks JSON/schema consistency, turn indices, label/quality/default-training consistency, exact span substring match, character offsets, evidence quotes, and best-index lists. Invalid strong spans are flagged as `review_required` for human inspection rather than silently dropped. Invalid weak spans are warnings and remain excluded from default training.
 
 For bulk runs, `scripts/validate_turn_localization.py` can also take `--record-json path/to/record.json` instead of `--prompt` if prompts are not saved one-per-record.
+
+## Canonical ImpactBench activation-example export
+
+Validated turn-localization annotation trees remain ignored scratch artifacts
+under `outputs/`. The canonical tracked training export is:
+
+```text
+data/impactbench_autonomy/activation_examples/v1/
+```
+
+Regenerate it from the current local Gemma and Claude-Haiku annotation roots:
+
+```bash
+python3 scripts/export_turn_localization_dataset.py
+```
+
+Current v1:
+
+- `2,616` canonical activation examples
+- Gemma 4 31B: `1,879` (`993` positive, `886` negative)
+- Claude Haiku 4.5: `737` (`621` positive, `116` negative)
+- `148` excluded/review groups
+
+Export policy:
+
+- require validator-clean strong positive/negative turns with exact source spans
+- deduplicate by `(record_id, assistant_turn_index)`
+- collapse exact duplicate annotations
+- exclude label, span, or include-decision disagreements to the review file
+- preserve intentionally confounded strong rows in the review file rather than
+  default training
+
+Use `src/gemma4_activation_lab/activation_datasets.py` to validate exported
+rows, resolve the tracked compressed ImpactBench source record, reconstruct the
+conversation through the target assistant turn, and map the localized character
+span to model token indices.
+
+Use Gemma as the primary first-pass direction-construction set. Claude-Haiku
+should be treated as a source-model sensitivity check because its target slices
+are strongly positive-skewed. Do not test a combined direction until
+source-specific results are understood, and do not double weight repeated
+records or metrics merely because they yielded more localized spans.
+
+`activation_label` is criterion-direction supervision, not a universal
+beneficial/harmful polarity. Use the exported `harmful` flag and restrict the
+first-pass autonomy-preservation and self-determination vectors to
+`harmful=false` rows. Audit or relabel `harmful=true` metrics before combining
+them into a target-behavior direction. For the initial two-vector comparison,
+also exclude rows tagged with both target subareas and split by source record or
+scenario before capture. The resulting Gemma first-pass slices are:
+
+- Autonomy Preservation: `1,055` rows (`581` positive, `474` negative)
+- Self-Determination: `503` rows (`262` positive, `241` negative)
 
 ## LLM judge (ImpactBench calibration)
 

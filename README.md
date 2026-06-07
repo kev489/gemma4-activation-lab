@@ -9,9 +9,20 @@ See:
 
 ## Intended workflow
 
-1. Add or refine matched examples under `data/`.
-2. Run `scripts/run_probe_experiment.py` to capture activations and compute direction vectors.
-3. Run `scripts/sweep_saved_steering.py` to compare modules, alphas, and token-position modes.
-4. Promote only useful lightweight artifacts from `outputs/` into `results/`.
-5. Append a new entry to `results/run_history.md` summarizing the run.
-6. Add evaluation code under `src/gemma4_activation_lab/experiments/` once the steering workflow is stable.
+For the canonical ImpactBench autonomy work:
+
+1. Load `data/impactbench_autonomy/activation_examples/v1/examples.jsonl`
+   through `gemma4_activation_lab.activation_datasets`.
+2. For the first two vectors, use Gemma-source, `harmful=false` rows and
+   exclude examples tagged with both Autonomy Preservation and
+   Self-Determination.
+3. Split by source record or scenario, balance metrics within each label, and
+   capture only the localized pooling-token span.
+4. Compare layers and vector-construction choices on held-out records before
+   steering evaluation.
+5. Promote only useful lightweight artifacts from `outputs/` into `results/`
+   and append the run to `results/run_history.md`.
+
+The older `scripts/run_probe_experiment.py` path remains the scaffold for the
+single-turn matched datasets. It is not yet wired to the canonical ImpactBench
+v1 export.

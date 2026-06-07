@@ -37,3 +37,33 @@ Files:
 
 - `autonomy_preservation_eval_50.jsonl`, `self_determination_eval_50.jsonl` — 50 rows (25 yes / 25 no) per subarea, seed=0.
 - `autonomy_preservation_eval_20.jsonl`, `self_determination_eval_20.jsonl` — 20-row variants for quota-constrained runs.
+
+## `activation_examples/v1/`
+
+Canonical tracked activation examples exported from validated turn-localization
+annotations:
+
+- `examples.jsonl` contains one deduplicated approved row per source assistant
+  turn and exact pooling span, including the source criterion's `harmful`
+  polarity flag.
+- `excluded_or_review.jsonl` preserves confounded rows and duplicate annotation
+  disagreements without including them in default training.
+- `manifest.json` records counts, hashes, source runs, and export policy.
+
+Current v1 has `2,616` examples and `148` excluded/review groups. The labels are
+criterion-direction labels. For the initial Autonomy Preservation and
+Self-Determination vectors, use Gemma-source `harmful=false` rows, exclude rows
+tagged with both target subareas, split by source record or scenario, and
+balance metrics within each label. See `activation_examples/v1/README.md` for
+the exact target-slice counts.
+
+Regenerate from the current local annotation roots with:
+
+```bash
+python3 scripts/export_turn_localization_dataset.py
+```
+
+Load and resolve rows with
+`gemma4_activation_lab.activation_datasets`. The loader reconstructs full
+conversation context from the compressed transcript archives rather than
+duplicating every conversation in the export.

@@ -1,0 +1,142 @@
+{
+  "classification_stats": {
+    "confounded_strong_not_included": 42,
+    "exact_duplicate_collapsed": 55,
+    "exported_examples": 2616,
+    "label_conflict": 4,
+    "mixed_include_decision": 1,
+    "same_label_different_span": 101
+  },
+  "dataset_version": "v1",
+  "examples": {
+    "benchmark_counts": {
+      "autonomy-preserving-information-provision": 368,
+      "cog-bias": 321,
+      "cognitive-offloading-asymmetry-over-scaffolding-vs-autonomy-preservation-in-llm-responses": 74,
+      "financial": 9,
+      "flourishing-ai-benchmark": 357,
+      "humanagency-bench": 503,
+      "humanebench": 140,
+      "modulated-cognitive-autonomy-benchmark-mcab": 454,
+      "prosocial-ai-index": 78,
+      "the-spillunder-effect-of-ai-cognitive-intrusion-and-multitasking-degradation-through-ai-assisted-task-planning": 276,
+      "user-bias": 36
+    },
+    "harmful_counts": {
+      "false": 2314,
+      "true": 302
+    },
+    "harmful_label_counts": {
+      "false": {
+        "negative": 825,
+        "positive": 1489
+      },
+      "true": {
+        "negative": 177,
+        "positive": 125
+      }
+    },
+    "label_counts": {
+      "negative": 1002,
+      "positive": 1614
+    },
+    "rows": 2616,
+    "subarea_counts": {
+      "Autonomy Preservation": 1687,
+      "Creativity & Cognitive Expression": 221,
+      "Education, Career & Finance": 36,
+      "Fairness & Bias": 74,
+      "Learning": 37,
+      "Mental Wellbeing": 260,
+      "Physical Health": 36,
+      "Self-Determination": 1178,
+      "Social Relationships": 106
+    },
+    "transcript_model_counts": {
+      "claude-haiku-4-5": 737,
+      "gemma-4-31b": 1879
+    },
+    "transcript_model_label_counts": {
+      "claude-haiku-4-5": {
+        "negative": 116,
+        "positive": 621
+      },
+      "gemma-4-31b": {
+        "negative": 886,
+        "positive": 993
+      }
+    },
+    "unique_metrics": 123,
+    "unique_records": 977
+  },
+  "excluded_or_review": {
+    "reason_counts": {
+      "confounded_strong_not_included": 42,
+      "label_conflict": 4,
+      "mixed_include_decision": 1,
+      "same_label_different_span": 101
+    },
+    "rows": 148
+  },
+  "export_policy": {
+    "confounded_strong_not_included_action": "preserve in review queue, exclude from v1",
+    "dedupe_key": [
+      "record_id",
+      "assistant_turn_index"
+    ],
+    "exact_duplicate_action": "collapse to one example with all annotation provenance",
+    "include": [
+      "validator-clean annotation file",
+      "strong positive or negative turn",
+      "valid exact pooling span",
+      "default_train_include=true in every annotation copy",
+      "all annotation copies agree on label and exact span"
+    ],
+    "label_conflict_action": "exclude to review queue",
+    "mixed_include_decision_action": "exclude to review queue",
+    "span_disagreement_action": "exclude to review queue"
+  },
+  "files": {
+    "examples": {
+      "bytes": 13527490,
+      "path": "data/impactbench_autonomy/activation_examples/v1/examples.jsonl",
+      "rows": 2616,
+      "sha256": "bd6c7251deed66eaa0689fe241725075139c1a0f4fed5178ec76724b3527f9cf"
+    },
+    "excluded_or_review": {
+      "bytes": 883951,
+      "path": "data/impactbench_autonomy/activation_examples/v1/excluded_or_review.jsonl",
+      "rows": 148,
+      "sha256": "a83109f9db5b152052a3d6a6602f5006a948066f7a0b42d0d1c57313a961cadb"
+    }
+  },
+  "generation_command": "python3 scripts/export_turn_localization_dataset.py",
+  "schema_version": "impactbench_activation_dataset_manifest_v1",
+  "source_runs": [
+    {
+      "annotation_files": 804,
+      "annotation_root": "outputs/turn_localization_annotations/codex_from_gemma-4-31b_20260531_codex10_parallel",
+      "name": "gemma_4_31b_codex10_promoted",
+      "salvage_method": "exact_plus_normalized_span_repair; evidence_quote_repair; clean_include_cleanup_20260604",
+      "source_archive": "impactBench/impactbench_transcripts/all_models/gemma-4-31b_transcripts.jsonl.gz",
+      "strong_directional_valid_candidates": 2115,
+      "transcript_model": "gemma-4-31b",
+      "validation_warning_counts": {
+        "strong_not_included": 22
+      }
+    },
+    {
+      "annotation_files": 404,
+      "annotation_root": "outputs/turn_localization_annotations_salvaged/normalized_span_remap_from_gpt-mcp_20260528",
+      "name": "claude_haiku_4_5_normalized_salvage",
+      "salvage_method": "exact_plus_normalized_span_repair; clean_include_cleanup_20260604",
+      "source_archive": "impactBench/impactbench_transcripts/all_models/claude-haiku-4-5_transcripts.jsonl.gz",
+      "strong_directional_valid_candidates": 810,
+      "transcript_model": "claude-haiku-4-5",
+      "validation_warning_counts": {
+        "evidence_quote_not_found": 721,
+        "strong_not_included": 21
+      }
+    }
+  ]
+}

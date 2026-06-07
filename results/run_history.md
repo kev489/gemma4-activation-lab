@@ -4,7 +4,7 @@ This file is the per-experiment record for `/home/kchafloq/gemma4-activation-lab
 
 Append new runs at the bottom. Do not re-paste env/setup or policy material here — link to `AGENTS.md` instead.
 
-Last appended: 2026-05-25.
+Last appended: 2026-06-07.
 
 ## Completed Runs
 
@@ -365,6 +365,480 @@ Open items tied to this arc:
 - Build a broader `autonomy_preservation_eval` (`n_per_class=90`) that covers all `90` metric_ids — the current `_eval_50` only hits `43/90`.
 - Code default in `src/gemma4_activation_lab/judge.py` is still `codex` / `gpt-5.4-mini`. The runner accepts `--provider claude --model claude-opus-4-7` to use Opus. Flip the code default when ready.
 - Wire the chosen judge into the warm-boundary / self-agency steering pipeline (originally `Recommended Next Steps` step 9 in this file).
+
+### 8. Turn Localization CLI Batch 0013, Codex
+
+Run directory:
+
+```text
+outputs/turn_localization_annotations/gpt-mcp_from_claude-haiku-4-5_20260528/batch_0013
+```
+
+Prompt directory:
+
+```text
+outputs/turn_localization_prompt_batches/claude-haiku-4-5_20260528__20_per_batch/batch_0013/prompts
+```
+
+Purpose:
+
+- Run the `batch_0013` turn-localization prompts through local Codex CLI as a one-request-at-a-time alternative to the GPT MCP batch path.
+- Preserve the original prompt files and write one JSON annotation per prompt.
+- Defer validation until all `20` annotation attempts completed.
+
+Command:
+
+```bash
+python3 scripts/run_turn_localization_cli_batch.py \
+  --provider codex \
+  --batch-id batch_0013
+```
+
+Execution details:
+
+- provider: `codex`
+- model: `gpt-5.4-mini`
+- annotation calls: sequential, one Codex CLI process per prompt
+- structured-output enforcement: Codex `--output-schema`
+- annotations produced: `20/20`
+- validation pass count: `3/20`
+- validation error count: `17/20`
+- review-required turns reported across failed validations: `27`
+- validation warnings: `84`
+
+Validation status:
+
+- `ok`: prompts `07`, `12`, `20`
+- `validation_error`: prompts `01`-`06`, `08`-`11`, `13`-`19`
+
+Common validation issues:
+
+- `span_not_found`: `33`
+- `evidence_quote_not_found`: `31`
+- `assistant_turn_count_mismatch`: `8`
+- `missing_top_level_field`: `4`
+- offset-repair warnings: `40`
+
+Interpretation:
+
+- The Codex CLI path successfully produced parseable JSON annotation files for every prompt, but most outputs are not directly usable for default training without repair or rerun.
+- The dominant failure mode is exact-text fidelity: spans and evidence quotes often do not match the source assistant turn exactly.
+- Some rows also omitted assistant turns, which violates the prompt requirement to return one `assistant_turns` item per assistant message.
+- The `3` validation-clean rows still have warnings and should be inspected before promotion.
+
+Key artifacts:
+
+- `outputs/turn_localization_annotations/gpt-mcp_from_claude-haiku-4-5_20260528/batch_0013/_run_summary.json`
+- `outputs/turn_localization_annotations/gpt-mcp_from_claude-haiku-4-5_20260528/batch_0013/_run_manifest.jsonl`
+- `outputs/turn_localization_annotations/gpt-mcp_from_claude-haiku-4-5_20260528/batch_0013/validation/`
+- `scripts/run_turn_localization_cli_batch.py`
+
+Recommended next steps:
+
+- Do not use the failed rows for default vector training as-is.
+- If Codex CLI remains the annotation backend, tighten the prompt wrapper or add a repair pass that only repairs exact spans and missing offsets against source assistant turns.
+- Compare the same batch with `claude-opus-4-7` using the same CLI runner before deciding whether Codex CLI is adequate for localization.
+
+### 9. Turn Localization Salvage Passes, Exact and Normalized Spans
+
+Run directories:
+
+```text
+outputs/turn_localization_annotations_salvaged/exact_span_remap_from_gpt-mcp_20260528
+outputs/turn_localization_annotations_salvaged/normalized_span_remap_from_gpt-mcp_20260528
+```
+
+Input annotation root:
+
+```text
+outputs/turn_localization_annotations/gpt-mcp_from_claude-haiku-4-5_20260528
+```
+
+Scope:
+
+- `batch_0021` through `batch_0041`
+- `404` original annotation files
+- Originals were not modified; both salvage passes wrote derived copies only.
+
+Commands:
+
+```bash
+python3 scripts/salvage_turn_localization_exact_spans.py --batch-start 21 --batch-end 41
+python3 scripts/salvage_turn_localization_normalized_spans.py --batch-start 21 --batch-end 41
+```
+
+Exact-span salvage:
+
+- Validator status changed from `58 ok / 346 validation_error` to `404 ok` on the derived copies.
+- Clean `default_train_eligible` turns changed from `474` to `621` (`+147`).
+- Repairs: `259` exact span turn-remaps, `651` same-turn offset repairs.
+- Unmatched original spans were conservatively replaced with inserted discard rows rather than guessed.
+
+Normalized-span salvage:
+
+- Adds deterministic normalized matching on top of exact-span salvage.
+- Normalization strips Markdown markers, normalizes quotes/dashes, lowercases, and collapses whitespace.
+- A non-exact span is recovered only when the normalized span has exactly one contiguous match in the normalized source assistant turns.
+- The recovered pooling text is replaced with the exact source substring and revalidated with the existing validator.
+- Clean `default_train_eligible` turns changed from `474` to `788` (`+314` vs original, `+167` vs exact-only).
+- Repairs: `167` normalized same-turn repairs, `94` normalized turn-remaps.
+- All `404` derived annotations validated as `ok`; remaining issues are warnings only (`evidence_quote_not_found`, `strong_not_included`).
+
+Interpretation:
+
+- The exact-span pass is safe to use as a default deterministic salvage baseline.
+- The normalized-span pass recovers substantial additional training signal and appears appropriate for vector construction if provenance fields are preserved in the eventual export.
+- Do not train directly from whole annotation directories. Export only validator-clean strong positive/negative turns with exact source pooling text, offsets, label, source record id, and salvage method.
+
+### 10. Fuzzy Span Candidate Review, No Automatic Salvage
+
+Run directory:
+
+```text
+outputs/turn_localization_salvage_reviews/fuzzy_span_candidates_from_gpt-mcp_20260528
+```
+
+Command:
+
+```bash
+python3 scripts/review_turn_localization_fuzzy_span_candidates.py --batch-start 21 --batch-end 41
+```
+
+Purpose:
+
+- Generate review-only fuzzy candidates for directional spans that exact-span and normalized-span salvage could not recover.
+- Do not write repaired annotation files.
+- Do not mutate originals or deterministic salvage outputs.
+
+Summary:
+
+- Directional spans seen: `1457`
+- Already exact/normalized repairable: `1171`
+- Needing fuzzy review after exact+normalized salvage: `286`
+- Candidate above threshold: `257`
+- No candidate above threshold: `29`
+- Buckets: `111` high-confidence, `98` medium-confidence, `48` low-confidence.
+- Potential training-relevant high-confidence rows: `89` strong rows with `default_train_include=true`.
+
+Review result:
+
+- High-confidence rows usually point to the intended source region, mostly correcting encoding artifacts, typography, Markdown, and paraphrased punctuation.
+- They are still not safe to auto-promote: inspected rows sometimes include boundary drift, leading/trailing context, duplicate-nearby candidates, or assistant-turn remaps that need confirmation.
+- Medium and low buckets are review leads only.
+
+Recommendation:
+
+- Keep fuzzy output as a human-review queue.
+- If accepted, export rows with `salvage_method=fuzzy_human_review`.
+- Do not include fuzzy rows in the default activation-vector training export unless a reviewer approves each row's exact source substring, offsets, assistant turn index, and label.
+
+### 11. Turn Localization Prompt Batches, Gemma 4 31B
+
+Prompt run:
+
+```text
+outputs/turn_localization_prompts/gemma-4-31b_20260531
+```
+
+Batch directory:
+
+```text
+outputs/turn_localization_prompt_batches/gemma-4-31b_20260531__20_per_batch
+```
+
+Purpose:
+
+- Create the same turn-localization prompt and 20-prompt batch layout previously used for `claude-haiku-4-5`, but for ImpactBench transcripts from `gemma-4-31b`.
+- Preserve the source record sampling shape: every available autonomy-preservation and self-determination record for the selected transcript model.
+
+Command:
+
+```bash
+python3 scripts/build_turn_localization_prompt_batches.py --transcript-model gemma-4-31b
+```
+
+Summary:
+
+- Total prompts: `804`
+- Autonomy-preservation prompts: `540`
+- Self-determination prompts: `264`
+- Batch size: `20`
+- Total batches: `41`
+- Final batch size: `4`
+
+Key artifacts:
+
+- `outputs/turn_localization_prompts/gemma-4-31b_20260531/manifest.json`
+- `outputs/turn_localization_prompts/gemma-4-31b_20260531/manifest_records.jsonl`
+- `outputs/turn_localization_prompt_batches/gemma-4-31b_20260531__20_per_batch/manifest.json`
+- `outputs/turn_localization_prompt_batches/gemma-4-31b_20260531__20_per_batch/README.md`
+- `scripts/build_turn_localization_prompt_batches.py`
+
+### 12. Gemma Turn Localization Batch Salvage, Exact Plus Normalized
+
+Input annotation root:
+
+```text
+outputs/turn_localization_annotations/codex_from_gemma-4-31b_20260531_codex10_parallel
+```
+
+Derived salvage roots:
+
+```text
+outputs/turn_localization_annotations_salvaged/exact_span_remap_from_codex_gemma-4-31b_20260531_codex10_parallel
+outputs/turn_localization_annotations_salvaged/normalized_span_remap_from_codex_gemma-4-31b_20260531_codex10_parallel
+```
+
+Scope:
+
+- `804` Gemma annotation files across `batch_0001` through `batch_0081`.
+- Before salvage and the final discard-quality fixes: `317 ok / 487 validation_error`.
+- After fixing three `discard_quality_mismatch` rows: `319 ok / 485 validation_error`.
+- The normalized deterministic salvage output was promoted back over the original Gemma annotation root after validation.
+
+Commands:
+
+```bash
+python3 scripts/salvage_turn_localization_exact_spans.py \
+  --batch-start 1 \
+  --batch-end 81 \
+  --prompt-batch-root outputs/turn_localization_prompt_batches/gemma-4-31b_20260531_codex10__10_per_batch \
+  --input-root outputs/turn_localization_annotations/codex_from_gemma-4-31b_20260531_codex10_parallel \
+  --output-root outputs/turn_localization_annotations_salvaged/exact_span_remap_from_codex_gemma-4-31b_20260531_codex10_parallel \
+  --python python3
+
+python3 scripts/salvage_turn_localization_normalized_spans.py \
+  --batch-start 1 \
+  --batch-end 81 \
+  --prompt-batch-root outputs/turn_localization_prompt_batches/gemma-4-31b_20260531_codex10__10_per_batch \
+  --input-root outputs/turn_localization_annotations/codex_from_gemma-4-31b_20260531_codex10_parallel \
+  --output-root outputs/turn_localization_annotations_salvaged/normalized_span_remap_from_codex_gemma-4-31b_20260531_codex10_parallel \
+  --exact-summary outputs/turn_localization_annotations_salvaged/exact_span_remap_from_codex_gemma-4-31b_20260531_codex10_parallel/_salvage_summary.json \
+  --python python3
+```
+
+Exact-span salvage:
+
+- Validator status changed from `319 ok / 485 validation_error` to `804 ok` on the exact derived copies.
+- Clean `default_train_eligible` turns changed from `1604` to `1826` (`+222`).
+- Repairs: `2387` same-turn offset repairs, `360` exact turn-remaps, `1010` discard normalizations.
+- Unmatched original spans were conservatively replaced with inserted discard rows rather than guessed.
+
+Normalized-span salvage:
+
+- Validator status stayed `804 ok`.
+- Clean `default_train_eligible` turns changed from `1604` to `2059` (`+455` vs original, `+233` vs exact-only).
+- Repairs: `275` normalized same-turn repairs, `83` normalized turn-remaps, `1010` discard normalizations.
+- Still-unmatched or ambiguous directional spans were excluded via inserted discard rows rather than guessed.
+- Independent validation of the promoted original tree found `804/804 ok`, `0` error codes, and `2059` default-training eligible turns.
+
+Remaining warnings after promotion, before evidence-quote repair:
+
+- `evidence_quote_not_found`: `661`
+- `strong_not_included`: `56`
+
+Interpretation:
+
+- The promoted Gemma annotation root is now validator-clean for hard errors and review-required turns.
+- Remaining warnings should be treated as audit signals, not blockers for exact-span default export.
+- Export code should still select only validator-clean strong positive/negative turns with exact source pooling text and offsets.
+
+### 13. Gemma Evidence Quote Repair
+
+Input annotation root:
+
+```text
+outputs/turn_localization_annotations/codex_from_gemma-4-31b_20260531_codex10_parallel
+```
+
+Snapshot before evidence-quote repair:
+
+```text
+outputs/turn_localization_annotations_snapshots/codex_from_gemma-4-31b_20260531_codex10_parallel_before_evidence_quote_repair
+```
+
+Audit artifacts:
+
+```text
+outputs/turn_localization_evidence_quote_repair/gemma-4-31b_20260531_codex10_parallel/summary.json
+outputs/turn_localization_evidence_quote_repair/gemma-4-31b_20260531_codex10_parallel/evidence_quote_repair_manifest.jsonl
+```
+
+Purpose:
+
+- Remove remaining `evidence_quote_not_found` warnings after deterministic span salvage.
+- Preserve exact source text only; do not use fuzzy matching or cross-turn quote repair.
+
+Policy:
+
+- Clear `evidence_quotes` on discard turns.
+- Keep already exact directional quotes unchanged.
+- If stripping only one pair of outer quotation marks creates an exact same-turn source substring, use that exact substring.
+- Otherwise use the normalized same-turn matcher only when it has one unique same-turn match; write back the exact source substring and require balanced Markdown/backtick delimiters.
+- Drop unmatched or cross-turn evidence quotes.
+- If a directional turn would otherwise have no evidence quotes, fill with the exact `assistant_pooling_text` only when it is already an exact source substring.
+
+Summary:
+
+- `evidence_quote_not_found`: `661 -> 0`
+- Changed files: `480`
+- Manifest rows: `1049`
+- Changed-file validation: `480 ok`
+- Independent aggregate validation after repair: `804/804 ok`, `0` error codes, `2059` default-training eligible turns.
+- Remaining warnings: `strong_not_included = 56`
+
+Repair counts:
+
+- `discard_quotes_cleared`: `668`
+- `quote_replaced_same_turn_normalized_balanced`: `442`
+- `quote_replaced_exact_variant`: `63`
+- `quote_dropped_unmatched`: `68`
+- `quote_filled_from_pooling`: `22`
+
+### 14. Default-Training Include Cleanup for Strong Negative Spans
+
+Local artifact roots:
+
+```text
+outputs/turn_localization_annotations/codex_from_gemma-4-31b_20260531_codex10_parallel
+outputs/turn_localization_annotations_salvaged/normalized_span_remap_from_gpt-mcp_20260528
+```
+
+Purpose:
+
+- Resolve `strong_not_included` warnings where a turn was labeled
+  `activation_label=negative`, `activation_quality=strong`, and had a valid
+  span, but still had `default_train_include=false`.
+- Flip only clean no-confound rows: `confounds == ["none"]` or an empty
+  confound list.
+- Leave confounded strong-negative rows excluded for now.
+
+Important:
+
+- These annotation roots are under ignored `outputs/` scratch paths, so the
+  JSON edits are local artifacts and are not included in normal git pushes.
+- Do not force-add the full annotation trees; export a compact tracked training
+  dataset when these rows are ready to enter model runs.
+
+Gemma current promoted root:
+
+- Flipped `34` clean strong-negative turns across `16` annotation files.
+- Validation after changed-file rechecks remained `804/804 ok`.
+- Current default-training eligible turns: `2093`.
+- Eligible labels: `1097` positive, `996` negative.
+- Remaining `strong_not_included` warnings: `22`, all negative strong valid
+  spans with confounds.
+- Remaining confounds include `scenario_content`, `crisis_handling`,
+  `legal_medical_disclaimer`, and `length`.
+
+Claude-Haiku normalized salvage root:
+
+- Flipped `1` clean strong-negative turn across `1` annotation file.
+- Validation after changed-file recheck remained `404/404 ok`.
+- Current default-training eligible turns: `789`.
+- Eligible labels: `669` positive, `120` negative.
+- Remaining `strong_not_included` warnings: `21`, all negative strong valid
+  spans with confounds.
+- Remaining confounds include `scenario_content`, `therapy_tone`, `length`,
+  `multi_turn_only`, and `legal_medical_disclaimer`.
+
+Interpretation:
+
+- The remaining warnings are intentional audit signals, not validation blockers.
+- The default include set is now large enough for first-pass vector construction
+  without adding confounded negative rows.
+
+### 15. Canonical ImpactBench Activation Examples v1
+
+Tracked dataset:
+
+```text
+data/impactbench_autonomy/activation_examples/v1/
+```
+
+Generation command:
+
+```bash
+python3 scripts/export_turn_localization_dataset.py
+```
+
+Purpose:
+
+- Move approved activation examples out of ignored annotation run trees into a
+  compact, tracked, reproducible dataset.
+- Preserve exact source assistant text, localized pooling spans, labels,
+  criterion metadata including `harmful` polarity, hashes, and annotation
+  provenance.
+- Reconstruct full multi-turn context from the tracked compressed ImpactBench
+  archives instead of duplicating every conversation in each row.
+
+Deduplication and exclusion policy:
+
+- Canonical key: `(record_id, assistant_turn_index)`.
+- Exact duplicate label/span annotations collapse to one example.
+- Same-label annotations that select different spans are excluded to review.
+- Label conflicts are excluded to review.
+- Mixed `default_train_include` decisions are excluded to review.
+- Strong valid rows intentionally left out because of confounds remain excluded
+  and are preserved in the review file.
+
+Important correction discovered during export:
+
+- Some ImpactBench records appeared in both autonomy subarea prompt batches and
+  were annotated twice.
+- Raw eligible-turn totals (`2093` Gemma and `789` Claude-Haiku) therefore
+  cannot be used directly as independent-example counts.
+- One Gemma turn also had a clean included copy and a confounded excluded copy;
+  it was conservatively withheld as `mixed_include_decision`.
+
+Canonical v1 summary:
+
+- Examples: `2616`.
+- Labels: `1614` positive, `1002` negative.
+- Criterion polarity: `2314` `harmful=false`, `302` `harmful=true`.
+- Gemma 4 31B: `1879` (`993` positive, `886` negative).
+- Claude Haiku 4.5: `737` (`621` positive, `116` negative).
+- Unique source records: `977`.
+- Unique metrics: `123`.
+- Exact duplicate rows collapsed: `55`.
+- Excluded/review groups: `148`.
+  - `same_label_different_span`: `101`
+  - `label_conflict`: `4`
+  - `mixed_include_decision`: `1`
+  - `confounded_strong_not_included`: `42`
+
+Artifacts:
+
+- `examples.jsonl`: canonical training candidates.
+- `excluded_or_review.jsonl`: withheld rows and all competing annotation
+  candidates.
+- `manifest.json`: counts, content hashes, source runs, and export policy.
+- `src/gemma4_activation_lab/activation_datasets.py`: validation, source
+  resolution, context reconstruction, and localized token-span mapping.
+- `tests/test_activation_datasets.py`: aggregate manifest and source-resolution
+  checks.
+
+Verification:
+
+- All `2616` examples passed schema, uniqueness, source-record hash,
+  assistant-turn text, and exact pooling-span checks.
+- `PYTHONPATH=src python3 -m unittest tests/test_activation_datasets.py -v`
+  passed `2/2` tests.
+
+Recommended first use:
+
+- Use Gemma as the primary construction set. Treat Claude-Haiku as a
+  source-model sensitivity check because its target slices are strongly
+  positive-skewed; do not combine sources before source-specific evaluation.
+- Treat `activation_label` as criterion-direction supervision. Restrict the
+  first-pass subarea vectors to `harmful=false`; the `302` `harmful=true`
+  examples need metric-level polarity review before inclusion.
+- For a clean first pass, use Gemma-source rows and exclude examples tagged
+  with both target subareas. This leaves `1055` autonomy-preservation rows
+  (`581` positive, `474` negative) and `503` self-determination rows
+  (`262` positive, `241` negative).
+- Add metric/source balancing in the vector-construction experiment rather than
+  treating all localized spans as uniformly independent.
 
 ## Main Findings So Far
 

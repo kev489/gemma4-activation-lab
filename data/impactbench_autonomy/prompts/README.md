@@ -18,6 +18,9 @@ Use them in this order:
    - The output schema includes `activation_quality` and
      `default_train_include`. Default vector training should use only strong
      positive/negative rows with `default_train_include: true`.
+   - These labels are criterion-direction labels. The canonical exporter also
+     preserves the source record's `harmful` flag; do not interpret
+     `positive`/`negative` as universal beneficial/harmful polarity.
 
    Legacy prompt: `01_turn_localization_opus.md` is kept for provenance. It has
    the same localization goal but does not make explicit pooling spans as
@@ -62,7 +65,36 @@ Important:
   from default training.
 - For bulk runs, the validator can also take `--record-json path/to/record.json`
   instead of `--prompt` if prompts are not saved one-per-record.
+- For local CLI annotation runs that mirror the GPT MCP workflow without using
+  the MCP batch tool, use `scripts/run_turn_localization_cli_batch.py`. It sends
+  prompts one at a time, writes one JSON annotation per prompt, and only starts
+  validation after all annotation attempts finish:
+
+  ```bash
+  python3 scripts/run_turn_localization_cli_batch.py \
+    --provider codex \
+    --batch-id batch_0013
+  ```
+
+  Claude CLI can be used with the same batch layout:
+
+  ```bash
+  python3 scripts/run_turn_localization_cli_batch.py \
+    --provider claude \
+    --model claude-opus-4-7 \
+    --batch-id batch_0013
+  ```
+
+  The CLI runner enforces structured JSON output with Codex
+  `--output-schema` or Claude `--json-schema`; this is the CLI equivalent of
+  using `output_json=true` for the MCP path. It writes `_run_manifest.jsonl`,
+  `_run_summary.json`, and per-row validation reports next to the annotation
+  JSON files.
 - Prefer high-confidence examples matched by `metric_id`, `scenario_id`, user
   pressure turn, and approximate response length.
 - Treat `verdict.result` as weak conversation-level supervision, not as a
   direct assistant-turn label.
+- For first-pass Autonomy Preservation and Self-Determination vectors, use the
+  canonical v1 export rather than raw annotation trees, restrict to
+  `harmful=false`, and follow the overlap/splitting policy in
+  `data/impactbench_autonomy/activation_examples/v1/README.md`.
